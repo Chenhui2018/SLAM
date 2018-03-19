@@ -1,216 +1,213 @@
-﻿# TensorFlow笔记五：操作
+# SLAM笔记1：新建工程和cmake
 
-标签（空格分隔）：TensorFlow
+标签（空格分隔）： SLAM cmake
 
-参考[^专栏文章]
+参考资料[^2.5TensorFlow运作方式入门]
 
-
----
-##1 constants 常量
-```
-#1
-a = tf.constant(5)
-a = tf.constant([2,2], name='a')
-b = tf.constant([[0,1],[2,3]], name='b')
-
-#if you want to diplay, do as I do in the command line of python.
-a = tf.constant(5)
-sess = tf.Session()
-print sess.run(a)
-
->>>[2 2] # This is the output result.
-```
----
-##1.1 special constant value
-```
-#1 zeros SEE #3
-tf.zeros()
-
-#2 zeros_like SEE #4
-b = tf.constant([[0,1],[2,3]], name='b')
-x = tf.zeros_like(b)
->>>
-[[1. 1.]
- [1. 1.]]
- 
-#3 ones
-tf.ones([3,2], name='a')
->>> 
-[[1. 1.]
- [1. 1.]
- [1. 1.]]
-
-#4 ones_like
-b = tf.constant([[0,1],[2,3]], name='b')
-x = tf.ones_like(b)
->>>
-[[1. 1.]
- [1. 1.]]
-
-#5 fill
-tf.fill([2, 3], 8)
->> [[8, 8, 8], [8, 8, 8]]
-
-#6 linspace
-tf.linspace(10.0, 13.0, 4)
->>> [10.0, 11.0, 12.0, 13.0]
-
-#7 range
-tf.range(3, limit=18, delta=3)
->> [3, 6, 9, 12, 15]
-```
----
-##1.2 random
-```
-#1 random_normal
-tf.random_normal()
-a = tf.Variable(tf.random_normal([2,2],seed=1))
->>>
-[[-0.81131822  1.48459876]
- [ 0.06532937 -2.44270396]]
-
-tf.truncated_normal()
-tf.random_uniform()
-tf.random_shuffle()
-tf.random_crop()
-tf.muiltinomial()
-tf.random_gamma()
-```
----
-##2 variables
-```
-a = tf.Variable(2, name='scalar')
-b = tf.Variable([2, 3], name='vector')
-```
-在使用变量之前必须对其进行初始化
-```
-# 全部初始化
-init = tf.global_variables_initializer()
-with tf.Session() as sess:
-    sess.run(init)
-
-# 部分初始化
-init_ab = tf.variable_initializer([a, b], name='init_ab')
-with tf.Session() as sess:
-    sess.run(init_ab)
-
-# 一个变量初始化
-w = tf.Variable(tf.zeros([784, 10]))
-with tf.Session() as sess:
-    sess.run(w.initializer)
-    
-w.initializer # 初始化
-```
-##2.1 variable operation
-```
-# Get result:
-w = tf.Variable(tf.truncated_normal([10, 10], name='normal'))
-with tf.Session() as sess:
-    sess.run(w.initializer)
-    print(w.eval()) # way 1
-    print(sess.run(w)) # way 2 common,better
-    
-# 赋值
-x.assign() # 分配值给这个变量
-# Compare P1 & P2
-
-# P1
-w = tf.Variable(10)
-w.assign(100)
-with tf.Session() as sess:
-    sess.run(w.initializer)
-    print(w.eval())
->> 10
-
-# P2
-w = tf.Variable(10)
-assign_op = w.assign(100)
-with tf.Session() as sess:
-    sess.run(w.initializer)
-    sess.run(assign_op) # do assgin
-    print(w.eval())
->> 100
-```
-##2.2 Session 是函数式编程
-```
-x = assign() 
-x = assign_add()
-x = assign_sub()
-
-W = tf.Variable(10)
-sess1 = tf.Session() # seperately
-sess2 = tf.Session()
-sess1.run(W.initializer)
-sess2.run(W.initializer)
-print(sess1.run(W.assign_add(10))) # >> 20
-print(sess2.run(W.assign_sub(2))) # >> 8
-print(sess1.run(W.assign_add(100))) # >> 120
-print(sess2.run(W.assign_sub(50))) # >> -42
-sess1.close()
-sess2.close()
-```
----
-##3 placeholder 占位符
-```
-tf.placeholder() 
-
-#normal process of tensorflow: 1 define graphs, 2 compute graphs;
-a = tf.placeholder(tf.float32, shape=[3])
-b = tf.constant([5, 5, 5], tf.float32)
-c = a + b
-with tf.Session() as sess:
-    print(sess.run(c, feed_dict={a: [1, 2, 3]}))
-	# 'feed_dict' acts like the input parameters of function 'c';
-```
----
-
-##4 lazy loading (should AVOID)
-May causing low speed of loading speed. 
-```
-# GOOD
-# normal loading
-x = tf.Variable(10, name='x')
-y = tf.Variable(20, name='y')
-z = tf.add(x, y)
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    for _ in range(10):
-        sess.run(z)
-
-# BAD
-# lazy loading
-x = tf.Variable(10, name='x')
-y = tf.Variable(20, name='y')
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
-    for _ in range(10):
-        sess.run(tf.add(x, y))
-```
+本文是基于“TensorFlow中文社区”[^中文社区]的教程（2.5）而写的笔记。
+本文的目录如下：
+> * 1 新建hello SLAM
+> * 2 cmake
+> * 完整代码
 
 ---
-##5 operaton
+## 1 新建hello SLAM
+### 1.1选择的工作路径如下：
 ```
-c = tf.add(a, b)
-c = tf.multiply(a,b,name='dot_production')
+chan@chan-virtual-machine:~/projects/SLAM$
 ```
----
-##6 excution
+以后的SLAM相关的代码均在这个目录下。
+### 1.2 CMD输入：
 ```
-with tf.Session() as sess:
-	print(sess.run())
+touch helloSLAM.cpp
+gedit helloSLAM.cpp
 ```
----
-##tensorflow board
+### 1.3编辑以下代码：
+```
+#include <iostream>
+
+int main()
+{
+	std::cout<<"Hello SLAM!"<<std::endl;
+	return 0;
+}
+```
+### 1.4 CMD输入：
+```
+g++ helloSLAM.cpp
+./a.out
+```
+看到运行结果。
+
+## 2 cmake 方式1 
+### 2.1 CMD：
+```
+touch CMakeLists.txt
+gedit CMakeLists.txt
+```
+### 1.2 输入cmake代码
+```
+# cmake version requirment
+cmake_minimum_required(VERSION 2.8)
+
+# project name.
+project( helloSLAM )
+
+# generate exectuable file.
+add_executable( helloSLAM helloSLAM.cpp )
+```
+### 1.3 CMD
+```
+cmake .
+make 
+./helloSLAM
+```
+看到输出结果。
+
+## 3 cmake 方式2
+把代码和编译生成的东西分开。一般会将编译产生的文件放到某个文件夹下（一般指定名字为build）
+
+### 3.1 清理
+先将方式1中产生的所有文件全部删除。
+只保留：
+```
+CMakeLists.txt helloSLAM.cpp
+```
+### 3.2 CMD
+```
+mkdir build
+cd build
+cmake ..
+make
+./hellowSLAM
+```
+看到输出结果。
+
+## 4 cmake 方式3
+生成lib文件并且调用。
+### 4.1 清理
+先将方式2中产生的所有文件全部删除。
+只保留：
+```
+CMakeLists.txt helloSLAM.cpp
+```
+### 4.2 建立lib的头文件和源文件
+```
+touch libHelloSLAM.cpp
+touch libHelloSLAM.h
+gedit libHelloSLAM.cpp
+```
+编辑“libHelloSLAM.cpp”，输入：
+```
+#include <iostream>
+
+int print_helloSLAM()
+{
+	std::cout<<"Hello SLAM!"<<std::endl;
+	return 0;
+}
+```
+CMD：
+```
+gedit libHelloSLAM.h
+```
+编辑“libHelloSLAM.h”，输入：
+```
+#pragma once
+
+int print_helloSLAM();
+```
+### 4.3 修改CMakeLists.txt
+CMD
+```
+gedit CMakeLists.txt
+```
+编辑“CMakeLists.txt”，输入：
+```
+# cmake version requirment
+cmake_minimum_required( VERSION 2.8 )
+
+
+# project name.
+project( helloSLAM )
+
+# generate library file.
+add_library( helloSLAM libHelloSLAM.cpp )
+```
+
+### 4.4 编译
+```
+mkdir build_lib
+cd build_lib
+cmake ..
+make
+```
+得到 **libhelloSLAM.a**
+### 4.5 调用
+CMD
+```
+gedit helloSLAM.cpp
+```
+编辑“helloSLAM.cpp”，输入：
+```
+#include "libHelloSLAM.h"
+
+int main()
+{
+	print_helloSLAM();
+	return 0;
+}
+```
+修改CMakeLists.txt（和方式1一致）
+```
+# cmake version requirment
+cmake_minimum_required(VERSION 2.8)
+
+# project name.
+project( helloSLAM )
+
+# generate exectuable file.
+add_executable( helloSLAM helloSLAM.cpp )
+
+target_link_libraries(helloSLAM /home/chan/projects/SLAM/build_lib/libhelloSLAM.a)
+```
+编译可执行文件
+CMD
+```
+cd .. # 到SLAM目录下
+mkdir build
+cd build
+cmake ..
+make
+./hellowSLAM
+```
+
+## 5 cmake 语法提要
+```
+# 执行
+cmake . # 表示在当前目录下执行 cmake
+cmake .. # 表示在前一级目录下执行 cmake
+make # 在当前目录下执行 make
+
+
+# 语法
+#1 设置 cmake 版本需求
+cmake_minimum_required(VERSION 2.8)
+
+#2 设置工程名
+project( 工程名 )
+
+#3 生成可执行文件
+add_executable( 可执行文件名 cpp文件 )
+
+#4 生成静态库
+add_library( helloSLAM helloSLAM.cpp )
+
+#5 生成共享库
+
+
 
 ```
-#in terminal:
-
-tensorflowboard --logdir="PATH_TO_LOG_DATA"
-http://localhost:6006/ # open with chrome
-```
----
-
-[^专栏文章]: https://zhuanlan.zhihu.com/p/28488510
 
 
 
